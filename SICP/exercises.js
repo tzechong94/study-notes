@@ -1418,3 +1418,175 @@ function lookup(given_key, tree_of_records) {
       : lookup(given_key, right_branch(tree_of_records));
   }
 }
+
+function install_rectangular_package() {
+  // internal functions
+  function real_part(z) {
+    return head(z);
+  }
+
+  function imag_part(z) {
+    return tail(z);
+  }
+  function make_from_real_imag(x, y) {
+    return pair(x, y);
+  }
+  function magnitude(z) {
+    return math_sqrt(square(real_part(z)) + square(imag_part(z)));
+  }
+  function angle(z) {
+    return math_atan(imag_part(z), real_part(z));
+  }
+  function make_from_mag_ang(r, a) {
+    return pair(r * math_cos(a), r * math_sin(a));
+  }
+  // interface to the rest of the system
+
+  function tag(x) {
+    return attach_tag("rectangular", x);
+  }
+  put("real_part", list("rectangular"), real_part);
+  put("imag_part", list("rectangular"), imag_part);
+  put("magnitude", list("rectangular"), magnitude);
+  put("angle", list("rectangular"), angle);
+  put("make_from_real_imag", list("rectangular"), (x, y) =>
+    tag(make_from_real_imag(x, y))
+  );
+  put("make_from_mag_ang", "rectangular", (r, a) =>
+    tag(make_from_mag_ang(r, a))
+  );
+  return "done";
+}
+
+function install_polar_package() {
+  // internal functions
+  function magnitude(z) {
+    return head(z);
+  }
+  function angle(z) {
+    return tail(z);
+  }
+  function make_from_mag_ang(r, a) {
+    return pair(r, a);
+  }
+  function real_part(z) {
+    return magnitude(z) * math_cos(angle(z));
+  }
+  function imag_part(z) {
+    return magnitude(z) * math_sin(angle(z));
+  }
+  function make_from_real_imag(x, y) {
+    return pair(math_sqrt(square(x) + square(y)), math_atan(y, x));
+  }
+
+  // interface to the rest of the system
+  function tag(x) {
+    return attach_tag("polar", x);
+  }
+  put("real_part", list("polar"), real_part);
+  put("imag_part", list("polar"), imag_part);
+  put("magnitude", list("polar"), magnitude);
+  put("angle", list("polar"), angle);
+  put("make_from_real_imag", "polar", (x, y) => tag(make_from_real_imag(x, y)));
+  put("make_from_mag_ang", "polar", (r, a) => tag(make_from_mag_ang(r, a)));
+  return "done";
+}
+
+//
+
+function apply_generic(op, args) {
+  const type_tags = map(type_tag, args);
+  const fun = get(op, type_tags);
+  return !is_undefined(fun)
+    ? apply_in_underlying_javascript(fun, map(contents, args))
+    : error(list(op, type_tags), "no method for these types -- apply_generic ");
+}
+
+// 2.74
+function make_insatiable_file(division, file) {
+  return pair(division, file);
+}
+
+function insatiable_file_division(insatiable_file) {
+  return head(insatiable_file);
+}
+
+function insatiable_file_content(insatiable_file) {
+  return tail(insatiable_file);
+}
+
+function get_record(employee_name, insatiable_file) {
+  const the_division = insatiable_file_division(insatiable_file);
+
+  const division_record = get("get_record", the_division)(
+    employee_name,
+    insatiable_file_content(instatiable_file)
+  );
+
+  return !is_undefined(record)
+    ? attach_tag(the_division, division_record)
+    : undefined;
+}
+
+function get_salary(insatiable_record) {
+  const the_division = insatiable_record_division(insatiable_record);
+  return get("get_salary", the_division)(insatiable_record_content);
+}
+
+function find_employee_record(employee_name, personnel_files) {
+  if (is_null(personnel_files)) {
+    return undefined;
+  } else {
+    const insatiable_record = get_record(employee_name, head(personnel_files));
+
+    return !is_undefined(insatiable_record)
+      ? insatiable_record
+      : find_employee_record(employee_name, tail(personnel_files));
+  }
+}
+
+function make_from_mag_ang(r, a) {
+  function dispatch(op) {
+    return op === "real_part"
+      ? r * math_cos(a)
+      : op === "imag_part"
+      ? r * math_sin(a)
+      : op === "magnitude"
+      ? r
+      : op === "angle"
+      ? a
+      : error(op, "unknown op -- make_from_real_imag");
+  }
+  return dispatch;
+}
+
+// Generic operations with explicit dispatch: For every new type, we need to touch every generic interface function, and add a new case.
+// Data-directed style: Here the implementation of the generic interface functions can be neatly packaged in "install" libraries for each new type. We can also have "install" libraries for new operations.
+// Message-passing-style: Like in the data-directed style, we need to write a library for each new type. In this case, the library consists of a dispatch function with a case for every generic interface function.
+// Overall, it's probably best to use a data-directed style when we need to frequently add new operations, and message-passing, when we frequently add new types.
+
+// 2.78
+function attach_tag(type_tag, contents) {
+  return is_number(contents)
+    ? pair("javascript_number", contents)
+    : pair(type_tag, contents);
+}
+
+function type_tag(datum) {
+  return is_number(datum)
+    ? "javascript_number"
+    : is_pair(datum)
+    ? head(datum)
+    : error(data, "bad tagged datum -- type_tag");
+}
+
+function contents(datum) {
+  return is_number(datum)
+    ? datum
+    : is_pair(datum)
+    ? tail(datum)
+    : error(data, "bad tagged datum -- contents");
+}
+
+// 2.79 - 2.86
+
