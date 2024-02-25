@@ -1590,3 +1590,164 @@ function contents(datum) {
 
 // 2.79 - 2.86
 
+// 3.1
+
+function make_accumulator(current) {
+  function add(arg) {
+    current = current + arg;
+    return current;
+  }
+  return add;
+}
+const a = make_accumulator(5);
+
+// 3.2
+function make_monitored(f) {
+  let counter = 0;
+  function mf(cmd) {
+    if (cmd === "how many calls") {
+      return counter;
+    } else if (cmd === "reset count") {
+      counter = 0;
+      return counter;
+    } else {
+      counter = counter + 1;
+      return counter;
+    }
+  }
+  return mf;
+}
+
+// 3.3
+function make_account(balance, p) {
+  let wrongPasswordCounter = 0;
+  function withdraw(amount) {
+    if (balance >= amount) {
+      balance = balance - amount;
+      return balance;
+    } else {
+      return "Insufficient funds";
+    }
+  }
+  function deposit(amount) {
+    balance = balance + amount;
+    return balance;
+  }
+  function call_the_cops() {
+    return "call the cops";
+  }
+  function dispatch(q, m) {
+    if (p === q) {
+      wrongPasswordCounter = 0;
+      return m === "withdraw"
+        ? withdraw
+        : m === "deposit"
+        ? deposit
+        : error(m, "unknown request -- make_account");
+    } else {
+      wrongPasswordCounter += 1;
+      if (wrongPasswordCounter > 7) {
+        call_the_cops();
+      }
+      return (q) => "incorrect password";
+    }
+  }
+
+  return dispatch;
+}
+
+// 3.12
+function pair(x, y) {
+  const fresh = get_new_pair();
+  set_head(fresh, x);
+  set_tail(fresh, y);
+  return fresh;
+}
+
+// 3.28
+function or_gate(a1, a2, output) {
+  function or_action_function() {
+    const new_value = logical_or(get_signal(a1), get_signal(2));
+    after_delay(or_gate_delay, () => set_signal(output, new_value));
+  }
+  add_action(a1, or_action_function);
+  add_action(a2, or_action_function);
+  return "ok";
+}
+function get_signal(wire) {
+  return wire("get_signal");
+}
+function set_signal(wire, new_value) {
+  return wire("set_signal")(new_value);
+}
+function add_action(wire, action_function) {
+  return wire("add_action")(action_function);
+}
+
+function make_wire() {
+  let signal_value = 0;
+  let action_functions = null;
+  function set_my_signal(new_value) {
+    if (signal_value !== new_value) {
+      signal_value = new_value;
+      return call_each(action_functions);
+    } else {
+      return "done";
+    }
+  }
+  function accept_action_function(fun) {
+    action_functions = pair(fun, action_functions);
+    fun();
+  }
+  function dispatch(m) {
+    return m === "get_signal"
+      ? signal_value
+      : m === "set_signal"
+      ? set_my_signal
+      : m === "add_action"
+      ? accept_action_function
+      : error(m, "unknown operation -- wire");
+  }
+  return dispatch;
+}
+
+function call_each(functions) {
+  if (is_null(functions)) {
+    return "done";
+  } else {
+    head(functions)();
+    return call_each(tail(functions));
+  }
+}
+// adds the given function to the list of functions to be run,
+// and then runs the new function once
+
+// the agenda -> contains a schedule of things to do
+// make_agenda(): returns new empty agenda
+// is_empty_agenda(agenda): is true if specified agenda is empty
+// first_agenda_item(agenda): returns the first item on the agenda
+// remove_first_agenda_item(agenda): remove first item
+// add_to_agenda(time, action, agenda):
+// modifies the agenda by adding the given action function to be run at
+// the specified time
+// current_time(agenda): returns current simulation time
+
+function after_delay(delay, action) {
+  add_to_agenda(delay + current_time(the_agenda), action, the_agenda);
+}
+// propagate executes each function on the_agenda in sequence.
+// as simulation runs, new items will be added to agenda and propagate will
+// continue simulation as long as there are items in agenda
+
+function propagate() {
+  if (is_empty_agenda(the_agenda)) {
+    return "done";
+  } else {
+    const first_item = first_agenda_item(the_agenda);
+    first_item();
+    remove_first_agenda_item(the_agenda);
+    return propagate();
+  }
+}
+
+
